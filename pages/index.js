@@ -29,6 +29,38 @@ export default function Home() {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markersRef = useRef([]);
+  const myInputRef = useRef(null);
+  const theirInputRef = useRef(null);
+  const myAutocompleteRef = useRef(null);
+  const theirAutocompleteRef = useRef(null);
+
+  // Init Places Autocomplete once Google Maps script is ready
+  useEffect(() => {
+    const initAutocomplete = () => {
+      if (!window.google || !myInputRef.current || !theirInputRef.current) return;
+      const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
+
+      myAutocompleteRef.current = new window.google.maps.places.Autocomplete(myInputRef.current, options);
+      myAutocompleteRef.current.addListener('place_changed', () => {
+        const place = myAutocompleteRef.current.getPlace();
+        setMyLocation(place.formatted_address || place.name || '');
+      });
+
+      theirAutocompleteRef.current = new window.google.maps.places.Autocomplete(theirInputRef.current, options);
+      theirAutocompleteRef.current.addListener('place_changed', () => {
+        const place = theirAutocompleteRef.current.getPlace();
+        setTheirLocation(place.formatted_address || place.name || '');
+      });
+    };
+
+    const interval = setInterval(() => {
+      if (window.google?.maps?.places) {
+        initAutocomplete();
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearch = async () => {
     if (!myLocation.trim() || !theirLocation.trim()) return;
@@ -173,6 +205,7 @@ export default function Home() {
                 <div style={styles.field}>
                   <label style={styles.label}>Your location</label>
                   <input
+                    ref={myInputRef}
                     style={styles.input}
                     value={myLocation}
                     onChange={e => setMyLocation(e.target.value)}
@@ -185,6 +218,7 @@ export default function Home() {
                 <div style={styles.field}>
                   <label style={styles.label}>Their location</label>
                   <input
+                    ref={theirInputRef}
                     style={styles.input}
                     value={theirLocation}
                     onChange={e => setTheirLocation(e.target.value)}
