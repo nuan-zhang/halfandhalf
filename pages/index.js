@@ -37,7 +37,10 @@ export default function Home() {
   // Init Places Autocomplete once Google Maps script is ready
   useEffect(() => {
     const initAutocomplete = () => {
-      if (!window.google || !myInputRef.current || !theirInputRef.current) return;
+      if (!window.google?.maps?.places) return false;
+      if (!myInputRef.current || !theirInputRef.current) return false;
+      if (myAutocompleteRef.current) return true; // already init'd
+
       const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
 
       myAutocompleteRef.current = new window.google.maps.places.Autocomplete(myInputRef.current, options);
@@ -51,15 +54,17 @@ export default function Home() {
         const place = theirAutocompleteRef.current.getPlace();
         setTheirLocation(place.formatted_address || place.name || '');
       });
+      return true;
     };
 
-    const interval = setInterval(() => {
-      if (window.google?.maps?.places) {
-        initAutocomplete();
-        clearInterval(interval);
-      }
-    }, 200);
-    return () => clearInterval(interval);
+    // Try immediately in case script already loaded
+    if (!initAutocomplete()) {
+      // Otherwise poll until ready
+      const interval = setInterval(() => {
+        if (initAutocomplete()) clearInterval(interval);
+      }, 100);
+      return () => clearInterval(interval);
+    }
   }, []);
 
   const handleSearch = async () => {
