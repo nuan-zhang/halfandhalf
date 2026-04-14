@@ -76,7 +76,7 @@ export default function Home() {
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
-      styles: mapStyles,
+      mapId: process.env.NEXT_PUBLIC_MAP_ID || '75948a7351552c87fff584af',
     });
     googleMapRef.current = map;
 
@@ -87,29 +87,50 @@ export default function Home() {
     // Target area pin
     addMarker(map, target, '🟢', 'Meet here', '#5A9E58');
 
-    // Coffee shop pins
+    // Coffee shop markers with photo thumbnails
     shops.forEach((shop, i) => {
       if (!shop.lat || !shop.lng) return;
-      const marker = new window.google.maps.Marker({
+
+      const shortName = shop.name.length > 14 ? shop.name.slice(0, 13) + '…' : shop.name;
+      const rating = shop.rating ? shop.rating.toFixed(1) : '';
+
+      const markerHtml = `
+        <div style="
+          display:flex;flex-direction:column;align-items:center;
+          cursor:pointer;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+        ">
+          <div style="
+            background:white;border-radius:8px;overflow:hidden;
+            border:2px solid white;width:52px;height:52px;
+          ">
+            ${shop.photoUrl
+              ? `<img src="${shop.photoUrl}" style="width:52px;height:52px;object-fit:cover;" />`
+              : `<div style="width:52px;height:52px;background:#C8873A;display:flex;align-items:center;justify-content:center;font-size:20px;">☕</div>`
+            }
+          </div>
+          <div style="
+            background:white;border-radius:6px;padding:3px 6px;margin-top:3px;
+            font-family:'DM Sans',sans-serif;font-size:11px;color:#2C1A0E;
+            white-space:nowrap;text-align:center;line-height:1.3;
+          ">
+            <div style="font-weight:500;">${shortName}</div>
+            ${rating ? `<div style="color:#C8873A;font-size:10px;">★ ${rating}</div>` : ''}
+          </div>
+          <div style="width:2px;height:6px;background:white;"></div>
+        </div>
+      `;
+
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: { lat: shop.lat, lng: shop.lng },
         map,
         title: shop.name,
-        label: {
-          text: String(i + 1),
-          color: '#FAF7F2',
-          fontFamily: 'DM Sans',
-          fontSize: '12px',
-          fontWeight: '500',
-        },
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 16,
-          fillColor: '#C8873A',
-          fillOpacity: 1,
-          strokeColor: '#2C1A0E',
-          strokeWeight: 1.5,
-        },
+        content: (() => {
+          const div = document.createElement('div');
+          div.innerHTML = markerHtml;
+          return div;
+        })(),
       });
+
       markersRef.current.push(marker);
       marker.addListener('click', () => setSelectedShop(shop));
     });
@@ -152,7 +173,7 @@ export default function Home() {
         <title>half & half — find the perfect coffee spot</title>
         <meta name="description" content="Find the perfect coffee shop to meet someone in London" />
         <Script
-          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`}
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places,marker&map_ids=halfandhalf`}
           strategy="afterInteractive"
           onLoad={() => {
             const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
@@ -621,15 +642,14 @@ const styles = {
   legendLabel: { fontSize: 12, color: '#2C1A0E' },
 };
 
-// Muted, warm map style
+// Greyscale map style
 const mapStyles = [
-  { featureType: 'all', elementType: 'geometry', stylers: [{ saturation: -30 }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9d8e0' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#e8e0d5' }] },
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#ddd5c8' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#c8d8b8' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#d0c8be' }] },
-  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#c8b8a8' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#5a4a3a' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#faf7f2', weight: 2 }] },
+  { elementType: 'geometry', stylers: [{ saturation: -100 }, { lightness: 5 }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#666666' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c8d8e0' }, { saturation: -60 }] },
+  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
 ];
