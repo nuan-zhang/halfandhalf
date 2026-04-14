@@ -30,7 +30,7 @@ export default function Home() {
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
   const markersRef = useRef([]);
-  const myInputRef = useRef(null);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
   const theirInputRef = useRef(null);
   const myAutocompleteRef = useRef(null);
   const theirAutocompleteRef = useRef(null);
@@ -62,7 +62,7 @@ export default function Home() {
   // Init Google Map once results arrive
   useEffect(() => {
     if (!results || !mapRef.current) return;
-    if (!window.google) return;
+    if (!googleLoaded || !window.google) return;
 
     const { myCoords, theirCoords, target, shops } = results;
 
@@ -76,7 +76,7 @@ export default function Home() {
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
-      mapId: process.env.NEXT_PUBLIC_MAP_ID || '75948a7351552c87fff584af',
+      mapId: '75948a7351552c87fff584af',
     });
     googleMapRef.current = map;
 
@@ -141,7 +141,7 @@ export default function Home() {
       bounds.extend({ lat: p.lat, lng: p.lng })
     );
     map.fitBounds(bounds, { top: 60, right: 40, bottom: 40, left: 40 });
-  }, [results]);
+  }, [results, googleLoaded]);
 
   function addMarker(map, coords, emoji, label, color) {
     const marker = new window.google.maps.Marker({
@@ -176,6 +176,7 @@ export default function Home() {
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places,marker&map_ids=halfandhalf`}
           strategy="afterInteractive"
           onLoad={() => {
+            setGoogleLoaded(true);
             const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
             if (myInputRef.current) {
               myAutocompleteRef.current = new window.google.maps.places.Autocomplete(myInputRef.current, options);
