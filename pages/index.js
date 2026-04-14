@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 
 const BIAS_OPTIONS = [
   { value: 'me', label: 'Near me' },
@@ -33,39 +34,6 @@ export default function Home() {
   const theirInputRef = useRef(null);
   const myAutocompleteRef = useRef(null);
   const theirAutocompleteRef = useRef(null);
-
-  // Init Places Autocomplete once Google Maps script is ready
-  useEffect(() => {
-    const initAutocomplete = () => {
-      if (!window.google?.maps?.places) return false;
-      if (!myInputRef.current || !theirInputRef.current) return false;
-      if (myAutocompleteRef.current) return true; // already init'd
-
-      const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
-
-      myAutocompleteRef.current = new window.google.maps.places.Autocomplete(myInputRef.current, options);
-      myAutocompleteRef.current.addListener('place_changed', () => {
-        const place = myAutocompleteRef.current.getPlace();
-        setMyLocation(place.formatted_address || place.name || '');
-      });
-
-      theirAutocompleteRef.current = new window.google.maps.places.Autocomplete(theirInputRef.current, options);
-      theirAutocompleteRef.current.addListener('place_changed', () => {
-        const place = theirAutocompleteRef.current.getPlace();
-        setTheirLocation(place.formatted_address || place.name || '');
-      });
-      return true;
-    };
-
-    // Try immediately in case script already loaded
-    if (!initAutocomplete()) {
-      // Otherwise poll until ready
-      const interval = setInterval(() => {
-        if (initAutocomplete()) clearInterval(interval);
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, []);
 
   const handleSearch = async () => {
     if (!myLocation.trim() || !theirLocation.trim()) return;
@@ -183,10 +151,26 @@ export default function Home() {
       <Head>
         <title>half & half — find the perfect coffee spot</title>
         <meta name="description" content="Find the perfect coffee shop to meet someone in London" />
-        <script
+        <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY}&libraries=places`}
-          async
-          defer
+          strategy="afterInteractive"
+          onLoad={() => {
+            const options = { componentRestrictions: { country: 'gb' }, fields: ['formatted_address', 'name'] };
+            if (myInputRef.current) {
+              myAutocompleteRef.current = new window.google.maps.places.Autocomplete(myInputRef.current, options);
+              myAutocompleteRef.current.addListener('place_changed', () => {
+                const place = myAutocompleteRef.current.getPlace();
+                setMyLocation(place.formatted_address || place.name || '');
+              });
+            }
+            if (theirInputRef.current) {
+              theirAutocompleteRef.current = new window.google.maps.places.Autocomplete(theirInputRef.current, options);
+              theirAutocompleteRef.current.addListener('place_changed', () => {
+                const place = theirAutocompleteRef.current.getPlace();
+                setTheirLocation(place.formatted_address || place.name || '');
+              });
+            }
+          }}
         />
       </Head>
 
